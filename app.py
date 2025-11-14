@@ -11,7 +11,7 @@ def load_data():
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     return {
-        "warna": "#74b9ff",
+        "warna": "#6c5ce7",
         "kotak_warna": "#ffffff",
         "musik": "",
         "logo": "",
@@ -25,7 +25,257 @@ def save_data(data):
 
 data = load_data()
 
-# ====== LOGIN PAGE ======
+# ===== WELCOME PAGE =====
+@app.route('/')
+def welcome():
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome IX T. Amir Hamzah</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, {{ warna }}, #a29bfe);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+  animation: fadeIn 2s ease forwards;
+  position: relative;
+}
+
+/* Logo */
+.logo {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  animation: popin 1.2s ease forwards;
+}
+
+/* Judul utama */
+h1 {
+  font-size: 2em;
+  margin: 10px;
+  opacity: 0;
+  animation: fadeUp 1.5s ease forwards 0.5s;
+}
+
+/* Subtext */
+.subtext {
+  font-size: 0.9em;
+  margin-top: 10px;
+  color: #e0e0e0;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  animation: fadeUp 1.8s ease forwards 1.2s;
+}
+
+/* Sosial Media */
+.social {
+  margin-top: 25px;
+  opacity: 0;
+  animation: fadeUp 1.8s ease forwards 2s;
+}
+
+.social p {
+  font-weight: 500;
+  margin-bottom: 10px;
+  color: #dcdcdc;
+}
+
+.social a {
+  margin: 0 14px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.4s;
+  font-size: 1.15em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.instagram {
+  background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.instagram i {
+  color: #e1306c;
+}
+
+.tiktok {
+  color: white;
+  text-shadow: 
+    1px 1px 6px #25F4EE,
+    -1px -1px 6px #FE2C55;
+}
+
+.tiktok i {
+  color: #25F4EE;
+}
+
+.social a:hover {
+  transform: scale(1.12) rotate(3deg);
+  opacity: 0.9;
+}
+
+/* Tombol Mulai */
+.btn {
+  margin-top: 35px;
+  background: white;
+  color: {{ warna }};
+  font-weight: 600;
+  border: none;
+  border-radius: 40px;
+  padding: 14px 34px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+  opacity: 0;
+  animation: fadeUp 1.5s ease forwards 2.3s;
+}
+
+.btn:hover {
+  transform: scale(1.08);
+  background: #f9f9f9;
+}
+
+/* Tombol Musik */
+.music-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.9);
+  color: {{ warna }};
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  opacity: 0;
+  animation: fadeInBtn 1.5s ease forwards 1s;
+}
+
+.music-btn:hover {
+  transform: scale(1.05);
+  background: white;
+}
+
+/* Animasi */
+@keyframes fadeUp { from {opacity: 0; transform: translateY(40px);} to {opacity: 1; transform: translateY(0);} }
+@keyframes fadeIn {from{opacity:0;}to{opacity:1;}}
+@keyframes fadeInBtn {from{opacity:0; transform: translateY(-10px);} to{opacity:1; transform: translateY(0);} }
+@keyframes popin {from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+@keyframes float {
+  0%, 100% {transform: translateY(0);}
+  50% {transform: translateY(-6px);}
+}
+
+/* Transisi Slide */
+.slide {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, {{ warna }}, #a29bfe);
+  transition: left 1s ease;
+  z-index: 5;
+}
+.slide.active { left: 0; }
+</style>
+</head>
+<body>
+  {% if logo %}
+  <img src="{{ logo }}" class="logo">
+  {% else %}
+  <div class="logo" style="background:white; display:flex; align-items:center; justify-content:center; color:{{warna}}; font-weight:bold;">LOGO</div>
+  {% endif %}
+  
+  <!-- Tombol Musik -->
+  <button id="musicToggle" class="music-btn" onclick="toggleMusic()">
+    <i class="fa-solid fa-volume-up"></i> Izinkan Lagu
+  </button>
+
+  <!-- Teks Utama -->
+  <h1>Selamat Datang di Website<br>IX T. Amir Hamzah</h1>
+  <p class="subtext">✨ Dibuat oleh Murid IX T. Amir Hamzah yang disempurnakan oleh AI ✨</p>
+
+  <!-- Sosial Media -->
+  <div class="social">
+    <p>Ikuti Media Sosial Kami:</p>
+    <a class="instagram" href="https://www.instagram.com/9tengkuamirhamzah?igsh=cGVxcjFtdHJpeXR4" target="_blank">
+      <i class="fab fa-instagram"></i>Instagram
+    </a>
+    <a class="tiktok" href="https://www.tiktok.com/" target="_blank">
+      <i class="fab fa-tiktok"></i>TikTok
+    </a>
+  </div>
+
+  <!-- Tombol Mulai -->
+  <button class="btn" onclick="playSoundAndNext()">Mulai Sekarang →</button>
+  <div class="slide" id="slide"></div>
+
+  <!-- Lagu Latar -->
+  <audio id="bgMusic" loop playsinline>
+    <source src="https://files.catbox.moe/da2y8i.mp4" type="audio/mp4">
+  </audio>
+
+  <!-- Suara Klik -->
+  <audio id="clickSound">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e4d1b7df3.mp3?filename=soft-click-131912.mp3" type="audio/mpeg">
+  </audio>
+
+<script>
+const bgMusic = document.getElementById('bgMusic');
+const toggleBtn = document.getElementById('musicToggle');
+bgMusic.volume = 0.4;
+
+function toggleMusic() {
+  if (bgMusic.paused) {
+    bgMusic.play();
+    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Matikan Lagu';
+  } else {
+    bgMusic.pause();
+    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-up"></i> Izinkan Lagu';
+  }
+}
+
+function playSoundAndNext(){
+  let sound = document.getElementById('clickSound');
+  sound.currentTime = 0;
+  sound.play();
+  let slide = document.getElementById('slide');
+  slide.classList.add('active');
+  setTimeout(()=>{ window.location.href='/public'; }, 900);
+}
+</script>
+</body>
+</html>
+""", warna=data["warna"], logo=data["logo"])
+
+# ===== LOGIN PAGE =====
 login_page = """
 <!DOCTYPE html>
 <html lang="id">
@@ -57,7 +307,7 @@ function login(){
 </body></html>
 """
 
-# ====== UI PUBLIK ======
+# ===== PUBLIC UI =====
 public_ui = """
 <!DOCTYPE html>
 <html lang="id">
@@ -110,6 +360,7 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
 const sidebar=document.getElementById('sidebar'),content=document.getElementById('content'),
 modal=document.getElementById('modal'),modalContent=document.getElementById('modalContent');
 document.getElementById('openSidebar').onclick=()=>sidebar.classList.toggle('active');
+
 function showCategory(cat){
     sidebar.classList.remove('active');
     if(cat==='siswa'){
@@ -133,6 +384,7 @@ function showCategory(cat){
         content.innerHTML=`<h2>${title[cat]}</h2><p>Segera diisi oleh admin.</p>`;
     }
 }
+
 function showDetail(i){
     fetch('/get_kegiatan').then(r=>r.json()).then(k=>{
         let d=k[i];if(!d)return;
@@ -143,6 +395,7 @@ function showDetail(i){
         <button class='close' onclick='modal.style.display="none"'>Tutup</button>`;
     });
 }
+
 window.onclick=e=>{if(e.target===modal)modal.style.display='none';};
 </script>
 </body></html>
@@ -224,9 +477,11 @@ loadSiswa();loadKegiatan();
 """
 
 # ===== ROUTES =====
-@app.route("/")
-def home():
-    return render_template_string(public_ui, warna=data["warna"], kotak_warna=data["kotak_warna"], musik=data["musik"], logo=data["logo"])
+
+@app.route("/public")
+def public_page():
+    return render_template_string(public_ui, warna=data["warna"], kotak_warna=data["kotak_warna"],
+        musik=data["musik"], logo=data["logo"])
 
 @app.route("/login")
 def login_page_view():
@@ -242,14 +497,17 @@ def login_post():
 @app.route("/admin")
 def admin_panel_page():
     if not session.get("admin"): return redirect(url_for("login_page_view"))
-    return render_template_string(admin_panel, warna=data["warna"], kotak_warna=data["kotak_warna"], musik=data["musik"], logo=data["logo"])
+    return render_template_string(admin_panel, warna=data["warna"], kotak_warna=data["kotak_warna"],
+        musik=data["musik"], logo=data["logo"])
 
 # ===== DATA API =====
 @app.route("/get_siswa")
 def get_siswa(): return jsonify(data["siswa"])
+
 @app.route("/tambah_siswa",methods=["POST"])
 def tambah_siswa():
     data["siswa"].append(request.json);save_data(data);return jsonify(success=True)
+
 @app.route("/hapus_siswa",methods=["POST"])
 def hapus_siswa():
     i=request.json["index"]
@@ -258,9 +516,11 @@ def hapus_siswa():
 
 @app.route("/get_kegiatan")
 def get_kegiatan(): return jsonify(data["kegiatan"])
+
 @app.route("/tambah_kegiatan",methods=["POST"])
 def tambah_kegiatan():
     data["kegiatan"].append(request.json);save_data(data);return jsonify(success=True)
+
 @app.route("/hapus_kegiatan",methods=["POST"])
 def hapus_kegiatan():
     i=request.json["index"]
@@ -270,9 +530,11 @@ def hapus_kegiatan():
 @app.route("/set_warna",methods=["POST"])
 def set_warna():
     j=request.json;data["warna"]=j["warna"];data["kotak_warna"]=j["kotak"];save_data(data);return jsonify(success=True)
+
 @app.route("/set_musik",methods=["POST"])
 def set_musik():
     data["musik"]=request.json["musik"];save_data(data);return jsonify(success=True)
+
 @app.route("/set_logo",methods=["POST"])
 def set_logo():
     data["logo"]=request.json["logo"];save_data(data);return jsonify(success=True)
