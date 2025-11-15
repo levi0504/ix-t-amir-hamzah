@@ -16,7 +16,10 @@ def load_data():
         "musik": "",
         "logo": "",
         "siswa": [],
-        "kegiatan": []
+        "kegiatan": [],
+        "jadwal": [],
+        "piket": [],
+        "struktur": []
     }
 
 def save_data(data):
@@ -373,26 +376,62 @@ function showCategory(cat){
         fetch('/get_kegiatan').then(r=>r.json()).then(k=>{
             let h="<h2>📸 Kegiatan IX T Amir Hamzah</h2>";
             k.forEach((x,i)=>{
-                h+=`<div class='bubble' onclick='showDetail(${i})'>
+                h+=`<div class='bubble' onclick='showDetail(\"kegiatan\",${i})'>
                     ${x.foto?`<img src='${x.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${x.tentang}</h3></div>`;
+                    <h3>${x.tentang || ""}</h3></div>`;
             });
             content.innerHTML=h||"<p>Belum ada kegiatan.</p>";
         });
-    }else{
-        const title={jadwal:"📅 Jadwal Pelajaran",piket:"🧹 Jadwal Piket",struktur:"🏫 Struktur Kelas"};
-        content.innerHTML=`<h2>${title[cat]}</h2><p>Segera diisi oleh admin.</p>`;
+    }else if(cat==='jadwal'){
+        fetch('/get_jadwal').then(r=>r.json()).then(j=>{
+            let h="<h2>📅 Jadwal Pelajaran</h2>";
+            j.forEach((item,i)=>{
+                h+=`<div class='bubble' onclick='showDetail(\"jadwal\",${i})'>
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                    <h3>${item.tentang || ""}</h3></div>`;
+            });
+            content.innerHTML=h||"<p>Belum ada jadwal.</p>";
+        });
+    }else if(cat==='piket'){
+        fetch('/get_piket').then(r=>r.json()).then(p=>{
+            let h="<h2>🧹 Jadwal Piket</h2>";
+            p.forEach((item,i)=>{
+                h+=`<div class='bubble' onclick='showDetail(\"piket\",${i})'>
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                    <h3>${item.tentang || ""}</h3></div>`;
+            });
+            content.innerHTML=h||"<p>Belum ada piket.</p>";
+        });
+    }else if(cat==='struktur'){
+        fetch('/get_struktur').then(r=>r.json()).then(s=>{
+            let h="<h2>🏫 Struktur Kelas</h2>";
+            s.forEach((item,i)=>{
+                h+=`<div class='bubble' onclick='showDetail(\"struktur\",${i})'>
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                    <h3>${item.tentang || ""}</h3></div>`;
+            });
+            content.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
+        });
     }
 }
 
-function showDetail(i){
-    fetch('/get_kegiatan').then(r=>r.json()).then(k=>{
-        let d=k[i];if(!d)return;
+function showDetail(category, index){
+    // generic detail fetcher for kegiatan, jadwal, piket, struktur
+    const routeMap = {
+        kegiatan: '/get_kegiatan',
+        jadwal: '/get_jadwal',
+        piket: '/get_piket',
+        struktur: '/get_struktur'
+    };
+    fetch(routeMap[category]).then(r=>r.json()).then(arr=>{
+        const d = arr[index];
+        if(!d) return;
         modal.style.display='flex';
-        modalContent.innerHTML=`<h2>${d.tentang}</h2>
-        ${d.foto2?`<img src='${d.foto2}'>`:""}
-        <p>${d.isi||""}</p>
-        <button class='close' onclick='modal.style.display="none"'>Tutup</button>`;
+        modalContent.innerHTML = `<h2>${d.tentang || ""}</h2>
+            ${d.foto?`<img src='${d.foto}'>`:""}
+            ${d.foto2?`<img src='${d.foto2}'>`:""}
+            <p>${d.isi || ""}</p>
+            <button class='close' onclick='modal.style.display=\"none\"'>Tutup</button>`;
     });
 }
 
@@ -446,6 +485,33 @@ button{padding:10px 15px;border:none;border-radius:10px;background:#0984e3;color
 <button onclick="tambahKegiatan()">Tambah Kegiatan</button>
 <div id="listkegiatan"></div>
 
+<hr>
+<h3>📅 Tambah Jadwal Pelajaran</h3>
+<input type="text" id="jadwal_foto" placeholder="Foto Jadwal (opsional)">
+<input type="text" id="jadwal_foto2" placeholder="Foto Kedua (opsional)">
+<input type="text" id="jadwal_tentang" placeholder="Judul / Tentang">
+<textarea id="jadwal_isi" placeholder="Isi / Deskripsi"></textarea>
+<button onclick="tambahJadwal()">Tambah Jadwal</button>
+<div id="listjadwal"></div>
+
+<hr>
+<h3>🧹 Tambah Jadwal Piket</h3>
+<input type="text" id="piket_foto" placeholder="Foto Piket (opsional)">
+<input type="text" id="piket_foto2" placeholder="Foto Kedua (opsional)">
+<input type="text" id="piket_tentang" placeholder="Judul / Tentang">
+<textarea id="piket_isi" placeholder="Isi / Deskripsi"></textarea>
+<button onclick="tambahPiket()">Tambah Piket</button>
+<div id="listpiket"></div>
+
+<hr>
+<h3>🏫 Tambah Struktur Kelas</h3>
+<input type="text" id="struktur_foto" placeholder="Foto Struktur (opsional)">
+<input type="text" id="struktur_foto2" placeholder="Foto Kedua (opsional)">
+<input type="text" id="struktur_tentang" placeholder="Judul / Tentang">
+<textarea id="struktur_isi" placeholder="Isi / Deskripsi"></textarea>
+<button onclick="tambahStruktur()">Tambah Struktur</button>
+<div id="liststruktur"></div>
+
 </div>
 <script>
 function loadSiswa(){
@@ -455,24 +521,65 @@ function loadSiswa(){
  });}
 function loadKegiatan(){
  fetch('/get_kegiatan').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((k,i)=>h+=`<div class='kotak'><b>${k.tentang}</b><br><button onclick='hapusK(${i})'>Hapus</button></div>`);
+  let h="";d.forEach((k,i)=>h+=`<div class='kotak'><b>${k.tentang || ''}</b><br><button onclick='hapusK(${i})'>Hapus</button></div>`);
   listkegiatan.innerHTML=h||"<p>Belum ada kegiatan.</p>";
  });}
+
+function loadJadwal(){
+ fetch('/get_jadwal').then(r=>r.json()).then(d=>{
+  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusJadwal(${i})'>Hapus</button></div>`);
+  listjadwal.innerHTML=h||"<p>Belum ada jadwal.</p>";
+ });}
+function loadPiket(){
+ fetch('/get_piket').then(r=>r.json()).then(d=>{
+  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusPiket(${i})'>Hapus</button></div>`);
+  listpiket.innerHTML=h||"<p>Belum ada piket.</p>";
+ });}
+function loadStruktur(){
+ fetch('/get_struktur').then(r=>r.json()).then(d=>{
+  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusStruktur(${i})'>Hapus</button></div>`);
+  liststruktur.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
+ });}
+
 function tambahSiswa(){
  fetch('/tambah_siswa',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({nama:nama.value,info:info.value})}).then(()=>loadSiswa());
+ body:JSON.stringify({nama:nama.value,info:info.value})}).then(()=>{nama.value='';info.value='';loadSiswa();});
 }
 function hapusS(i){fetch('/hapus_siswa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadSiswa());}
+
 function tambahKegiatan(){
  fetch('/tambah_kegiatan',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({foto:foto.value,tentang:tentang.value,foto2:foto2.value,isi:isi.value})}).then(()=>loadKegiatan());
+ body:JSON.stringify({foto:foto.value,tentang:tentang.value,foto2:foto2.value,isi:isi.value})}).then(()=>{foto.value='';tentang.value='';foto2.value='';isi.value='';loadKegiatan();});
 }
 function hapusK(i){fetch('/hapus_kegiatan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadKegiatan());}
+
+function tambahJadwal(){
+ fetch('/tambah_jadwal',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({foto:jadwal_foto.value,foto2:jadwal_foto2.value,tentang:jadwal_tentang.value,isi:jadwal_isi.value})})
+ .then(()=>{jadwal_foto.value='';jadwal_foto2.value='';jadwal_tentang.value='';jadwal_isi.value='';loadJadwal();});
+}
+function hapusJadwal(i){fetch('/hapus_jadwal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadJadwal());}
+
+function tambahPiket(){
+ fetch('/tambah_piket',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({foto:piket_foto.value,foto2:piket_foto2.value,tentang:piket_tentang.value,isi:piket_isi.value})})
+ .then(()=>{piket_foto.value='';piket_foto2.value='';piket_tentang.value='';piket_isi.value='';loadPiket();});
+}
+function hapusPiket(i){fetch('/hapus_piket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadPiket());}
+
+function tambahStruktur(){
+ fetch('/tambah_struktur',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({foto:struktur_foto.value,foto2:struktur_foto2.value,tentang:struktur_tentang.value,isi:struktur_isi.value})})
+ .then(()=>{struktur_foto.value='';struktur_foto2.value='';struktur_tentang.value='';struktur_isi.value='';loadStruktur();});
+}
+function hapusStruktur(i){fetch('/hapus_struktur',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadStruktur());}
+
 function setWarna(){fetch('/set_warna',{method:'POST',headers:{'Content-Type':'application/json'},
  body:JSON.stringify({warna:warna.value,kotak:kotak.value})});}
 function setMusik(){fetch('/set_musik',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({musik:musik.value})});}
 function setLogo(){fetch('/set_logo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({logo:logo.value})});}
-loadSiswa();loadKegiatan();
+
+loadSiswa();loadKegiatan();loadJadwal();loadPiket();loadStruktur();
 </script></body></html>
 """
 
@@ -489,7 +596,7 @@ def login_page_view():
 
 @app.route("/login", methods=["POST"])
 def login_post():
-    if request.json.get("password") == "admin123":
+    if request.json.get("password") == "tah123":
         session["admin"] = True
         return jsonify(success=True)
     return jsonify(success=False)
@@ -527,6 +634,47 @@ def hapus_kegiatan():
     if 0<=i<len(data["kegiatan"]): del data["kegiatan"][i];save_data(data)
     return jsonify(success=True)
 
+# ===== NEW CATEGORIES: JADWAL, PIKET, STRUKTUR =====
+@app.route("/get_jadwal")
+def get_jadwal(): return jsonify(data.get("jadwal", []))
+
+@app.route("/tambah_jadwal",methods=["POST"])
+def tambah_jadwal():
+    data.setdefault("jadwal", []).append(request.json); save_data(data); return jsonify(success=True)
+
+@app.route("/hapus_jadwal",methods=["POST"])
+def hapus_jadwal():
+    i=request.json["index"]
+    if 0<=i<len(data.get("jadwal", [])): del data["jadwal"][i]; save_data(data)
+    return jsonify(success=True)
+
+@app.route("/get_piket")
+def get_piket(): return jsonify(data.get("piket", []))
+
+@app.route("/tambah_piket",methods=["POST"])
+def tambah_piket():
+    data.setdefault("piket", []).append(request.json); save_data(data); return jsonify(success=True)
+
+@app.route("/hapus_piket",methods=["POST"])
+def hapus_piket():
+    i=request.json["index"]
+    if 0<=i<len(data.get("piket", [])): del data["piket"][i]; save_data(data)
+    return jsonify(success=True)
+
+@app.route("/get_struktur")
+def get_struktur(): return jsonify(data.get("struktur", []))
+
+@app.route("/tambah_struktur",methods=["POST"])
+def tambah_struktur():
+    data.setdefault("struktur", []).append(request.json); save_data(data); return jsonify(success=True)
+
+@app.route("/hapus_struktur",methods=["POST"])
+def hapus_struktur():
+    i=request.json["index"]
+    if 0<=i<len(data.get("struktur", [])): del data["struktur"][i]; save_data(data)
+    return jsonify(success=True)
+
+# ===== SETTINGS =====
 @app.route("/set_warna",methods=["POST"])
 def set_warna():
     j=request.json;data["warna"]=j["warna"];data["kotak_warna"]=j["kotak"];save_data(data);return jsonify(success=True)
