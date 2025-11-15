@@ -1,294 +1,188 @@
 from flask import Flask, render_template_string, request, jsonify, redirect, url_for, session
-import json, os, base64, time, requests
+import json, os
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "rahasia_login_admin")
+app = Flask(name)
+app.secret_key = "rahasia_login_admin"
+DATA_FILE = "data.json"
 
-# ===== CONFIG =====
-DATA_FILE = os.environ.get("DATA_FILE", "data.json")
-# Set these environment variables before running:
-# GITHUB_TOKEN (required), GITHUB_REPO (owner/repo, optional default set below)
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # REQUIRED for GitHub sync
-GITHUB_REPO = os.environ.get("GITHUB_REPO", "levi0504/ix-t-amir-hazmah")  # default overwritten to your repo; ensure correct
-GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "data.json")  # path inside repo
-GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
-COMMIT_MESSAGE = os.environ.get("GITHUB_COMMIT_MESSAGE", "Automated update from web admin")
-GITHUB_UPLOAD_RETRIES = int(os.environ.get("GITHUB_UPLOAD_RETRIES", "2"))
-GITHUB_UPLOAD_BACKOFF = float(os.environ.get("GITHUB_UPLOAD_BACKOFF", "1.0"))
+===== LOAD & SAVE =====
 
-# ===== LOAD & SAVE (with GitHub sync) =====
 def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {
-        "warna": "#6c5ce7",
-        "kotak_warna": "#ffffff",
-        "musik": "",
-        "logo": "",
-        "siswa": [],
-        "kegiatan": [],
-        "jadwal": [],
-        "piket": [],
-        "struktur": []
-    }
+if os.path.exists(DATA_FILE):
+with open(DATA_FILE, "r") as f:
+return json.load(f)
+return {
+"warna": "#6c5ce7",
+"kotak_warna": "#ffffff",
+"musik": "",
+"logo": "",
+"siswa": [],
+"kegiatan": [],
+"jadwal": [],
+"piket": [],
+"struktur": []
+}
 
-def atomic_write(obj, path=DATA_FILE):
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+def save_data(data):
+with open(DATA_FILE, "w") as f:
+json.dump(data, f)
 
-def upload_to_github(retries=GITHUB_UPLOAD_RETRIES, backoff=GITHUB_UPLOAD_BACKOFF):
-    """
-    Upload (create or update) DATA_FILE to the configured GitHub repo/path using Contents API.
-    Runs synchronously and returns True on success.
-    """
-    if not GITHUB_TOKEN:
-        app.logger.warning("GITHUB_TOKEN not set — skipping GitHub upload.")
-        return False
-
-    owner_repo = GITHUB_REPO.strip()
-    api_url = f"https://api.github.com/repos/{owner_repo}/contents/{GITHUB_FILE_PATH}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json"
-    }
-
-    # Read and encode file
-    try:
-        with open(DATA_FILE, "rb") as f:
-            content_b64 = base64.b64encode(f.read()).decode()
-    except Exception as e:
-        app.logger.error(f"Failed reading {DATA_FILE} for GitHub upload: {e}")
-        return False
-
-    # Try to get existing file (to retrieve sha)
-    sha = None
-    params = {"ref": GITHUB_BRANCH}
-    try:
-        r = requests.get(api_url, headers=headers, params=params, timeout=10)
-        if r.status_code == 200:
-            sha = r.json().get("sha")
-        elif r.status_code == 404:
-            sha = None
-        else:
-            app.logger.warning(f"GitHub GET contents returned {r.status_code}: {r.text}")
-    except Exception as e:
-        app.logger.warning(f"Could not GET existing GitHub file: {e}")
-
-    payload = {
-        "message": COMMIT_MESSAGE,
-        "content": content_b64,
-        "branch": GITHUB_BRANCH
-    }
-    if sha:
-        payload["sha"] = sha
-
-    attempt = 0
-    while attempt <= retries:
-        try:
-            put = requests.put(api_url, headers=headers, json=payload, timeout=15)
-            if put.status_code in (200, 201):
-                app.logger.info("Successfully uploaded data.json to GitHub.")
-                return True
-            else:
-                app.logger.warning(f"GitHub upload failed (status {put.status_code}): {put.text}")
-        except Exception as e:
-            app.logger.warning(f"Exception while uploading to GitHub: {e}")
-
-        attempt += 1
-        time.sleep(backoff * attempt)
-
-    app.logger.error("upload_to_github ultimately failed after retries.")
-    return False
-
-def save_data(data_obj):
-    """Write locally (atomically) then try to upload to GitHub synchronously."""
-    try:
-        atomic_write(data_obj, DATA_FILE)
-    except Exception as e:
-        app.logger.error(f"Failed writing data locally: {e}")
-        return False
-
-    # Attempt GitHub upload (will log failures but won't raise)
-    ok = upload_to_github()
-    if not ok:
-        app.logger.warning("Saved locally but GitHub sync failed or was skipped.")
-    return True
-
-# load initial data
 data = load_data()
 
-# ===== Templates (kept exactly as in original UI) =====
-# For readability here we embed the templates exactly as strings (unchanged UI)
-welcome_template = """..."""  # TRUNCATED IN THIS SNIPPET (see full code below)
-login_page = """..."""
-public_ui = """..."""
-admin_panel = """..."""
+===== WELCOME PAGE =====
 
-# NOTE:
-# The three template variables above are placeholders for the full HTML you already provided.
-# In the final file below these placeholders are replaced with your original long HTML strings.
-# To keep this sample readable in chat, please replace the placeholders with the exact template content
-# (copy from your original file). In the code I will provide next, those templates are the unchanged originals.
+@app.route('/')
+def welcome():
+return render_template_string("""
 
-# -------------------------
-# For convenience I'll now define the exact templates (unchanged) — paste your original HTML strings:
-# -------------------------
-
-welcome_template = """\
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Welcome IX T. Amir Hamzah</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
-
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, {{ warna }}, #a29bfe);
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  text-align: center;
-  animation: fadeIn 2s ease forwards;
-  position: relative;
+<!DOCTYPE html>  <html lang="id">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Welcome IX T. Amir Hamzah</title>  
+<style>  
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');  
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');  body {
+margin: 0;
+font-family: 'Poppins', sans-serif;
+background: linear-gradient(135deg, {{ warna }}, #a29bfe);
+height: 100vh;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+color: white;
+text-align: center;
+animation: fadeIn 2s ease forwards;
+position: relative;
 }
 
 /* Logo */
 .logo {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  animation: popin 1.2s ease forwards;
+width: 140px;
+height: 140px;
+border-radius: 50%;
+object-fit: cover;
+margin-bottom: 25px;
+box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+animation: popin 1.2s ease forwards;
 }
 
 /* Judul utama */
 h1 {
-  font-size: 2em;
-  margin: 10px;
-  opacity: 0;
-  animation: fadeUp 1.5s ease forwards 0.5s;
+font-size: 2em;
+margin: 10px;
+opacity: 0;
+animation: fadeUp 1.5s ease forwards 0.5s;
 }
 
 /* Subtext */
 .subtext {
-  font-size: 0.9em;
-  margin-top: 10px;
-  color: #e0e0e0;
-  letter-spacing: 0.5px;
-  opacity: 0;
-  animation: fadeUp 1.8s ease forwards 1.2s;
+font-size: 0.9em;
+margin-top: 10px;
+color: #e0e0e0;
+letter-spacing: 0.5px;
+opacity: 0;
+animation: fadeUp 1.8s ease forwards 1.2s;
 }
 
 /* Sosial Media */
 .social {
-  margin-top: 25px;
-  opacity: 0;
-  animation: fadeUp 1.8s ease forwards 2s;
+margin-top: 25px;
+opacity: 0;
+animation: fadeUp 1.8s ease forwards 2s;
 }
 
 .social p {
-  font-weight: 500;
-  margin-bottom: 10px;
-  color: #dcdcdc;
+font-weight: 500;
+margin-bottom: 10px;
+color: #dcdcdc;
 }
 
 .social a {
-  margin: 0 14px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: 0.4s;
-  font-size: 1.15em;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  animation: float 3s ease-in-out infinite;
+margin: 0 14px;
+text-decoration: none;
+font-weight: 600;
+transition: 0.4s;
+font-size: 1.15em;
+display: inline-flex;
+align-items: center;
+gap: 6px;
+animation: float 3s ease-in-out infinite;
 }
 
 .instagram {
-  background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
 }
 
 .instagram i {
-  color: #e1306c;
+color: #e1306c;
 }
 
 .tiktok {
-  color: white;
-  text-shadow:
-    1px 1px 6px #25F4EE,
-    -1px -1px 6px #FE2C55;
+color: white;
+text-shadow:
+1px 1px 6px #25F4EE,
+-1px -1px 6px #FE2C55;
 }
 
 .tiktok i {
-  color: #25F4EE;
+color: #25F4EE;
 }
 
 .social a:hover {
-  transform: scale(1.12) rotate(3deg);
-  opacity: 0.9;
+transform: scale(1.12) rotate(3deg);
+opacity: 0.9;
 }
 
 /* Tombol Mulai */
 .btn {
-  margin-top: 35px;
-  background: white;
-  color: {{ warna }};
-  font-weight: 600;
-  border: none;
-  border-radius: 40px;
-  padding: 14px 34px;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(255,255,255,0.3);
-  transition: all 0.3s ease;
-  opacity: 0;
-  animation: fadeUp 1.5s ease forwards 2.3s;
+margin-top: 35px;
+background: white;
+color: {{ warna }};
+font-weight: 600;
+border: none;
+border-radius: 40px;
+padding: 14px 34px;
+cursor: pointer;
+box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+transition: all 0.3s ease;
+opacity: 0;
+animation: fadeUp 1.5s ease forwards 2.3s;
 }
 
 .btn:hover {
-  transform: scale(1.08);
-  background: #f9f9f9;
+transform: scale(1.08);
+background: #f9f9f9;
 }
 
 /* Tombol Musik */
 .music-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255,255,255,0.9);
-  color: {{ warna }};
-  border: none;
-  border-radius: 30px;
-  padding: 10px 20px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  opacity: 0;
-  animation: fadeInBtn 1.5s ease forwards 1s;
+position: absolute;
+top: 20px;
+right: 20px;
+background: rgba(255,255,255,0.9);
+color: {{ warna }};
+border: none;
+border-radius: 30px;
+padding: 10px 20px;
+font-weight: 600;
+cursor: pointer;
+display: flex;
+align-items: center;
+gap: 8px;
+transition: all 0.3s ease;
+box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+opacity: 0;
+animation: fadeInBtn 1.5s ease forwards 1s;
 }
 
 .music-btn:hover {
-  transform: scale(1.05);
-  background: white;
+transform: scale(1.05);
+background: white;
 }
 
 /* Animasi */
@@ -297,388 +191,342 @@ h1 {
 @keyframes fadeInBtn {from{opacity:0; transform: translateY(-10px);} to{opacity:1; transform: translateY(0);} }
 @keyframes popin {from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
 @keyframes float {
-  0%, 100% {transform: translateY(0);}
-  50% {transform: translateY(-6px);}
+0%, 100% {transform: translateY(0);}
+50% {transform: translateY(-6px);}
 }
 
 /* Transisi Slide */
 .slide {
-  position: absolute;
-  top: 0;
-  left: 100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, {{ warna }}, #a29bfe);
-  transition: left 1s ease;
-  z-index: 5;
+position: absolute;
+top: 0;
+left: 100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(135deg, {{ warna }}, #a29bfe);
+transition: left 1s ease;
+z-index: 5;
 }
 .slide.active { left: 0; }
 </style>
-</head>
-<body>
-  {% if logo %}
-  <img src="{{ logo }}" class="logo">
-  {% else %}
-  <div class="logo" style="background:white; display:flex; align-items:center; justify-content:center; color:{{warna}}; font-weight:bold;">LOGO</div>
-  {% endif %}
 
-  <!-- Tombol Musik -->
-  <button id="musicToggle" class="music-btn" onclick="toggleMusic()">
-    <i class="fa-solid fa-volume-up"></i> Izinkan Lagu
-  </button>
+</head>  
+<body>  
+  {% if logo %}  
+  <img src="{{ logo }}" class="logo">  
+  {% else %}  
+  <div class="logo" style="background:white; display:flex; align-items:center; justify-content:center; color:{{warna}}; font-weight:bold;">LOGO</div>  
+  {% endif %}    <!-- Tombol Musik -->    <button id="musicToggle" class="music-btn" onclick="toggleMusic()">  
+    <i class="fa-solid fa-volume-up"></i> Izinkan Lagu  
+  </button>    <!-- Teks Utama -->    <h1>Selamat Datang di Website<br>IX T. Amir Hamzah</h1>  
+  <p class="subtext">✨ Dibuat oleh Murid IX T. Amir Hamzah yang disempurnakan oleh AI ✨</p>    <!-- Sosial Media -->    <div class="social">  
+    <p>Ikuti Media Sosial Kami:</p>  
+    <a class="instagram" href="https://www.instagram.com/9tengkuamirhamzah?igsh=cGVxcjFtdHJpeXR4" target="_blank">  
+      <i class="fab fa-instagram"></i>Instagram  
+    </a>  
+    <a class="tiktok" href="https://www.tiktok.com/" target="_blank">  
+      <i class="fab fa-tiktok"></i>TikTok  
+    </a>  
+  </div>    <!-- Tombol Mulai -->  <button class="btn" onclick="playSoundAndNext()">Mulai Sekarang →</button>
 
-  <!-- Teks Utama -->
-  <h1>Selamat Datang di Website<br>IX T. Amir Hamzah</h1>
-  <p class="subtext">✨ Dibuat oleh Murid IX T. Amir Hamzah yang disempurnakan oleh AI ✨</p>
+  <div class="slide" id="slide"></div>    <!-- Lagu Latar -->    <audio id="bgMusic" loop playsinline>  
+    <source src="https://files.catbox.moe/da2y8i.mp4" type="audio/mp4">  
+  </audio>    <!-- Suara Klik -->    <audio id="clickSound">  
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e4d1b7df3.mp3?filename=soft-click-131912.mp3" type="audio/mpeg">  
+  </audio>  <script>  
+const bgMusic = document.getElementById('bgMusic');  
+const toggleBtn = document.getElementById('musicToggle');  
+bgMusic.volume = 0.4;  
+  
+function toggleMusic() {  
+  if (bgMusic.paused) {  
+    bgMusic.play();  
+    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Matikan Lagu';  
+  } else {  
+    bgMusic.pause();  
+    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-up"></i> Izinkan Lagu';  
+  }  
+}  
+  
+function playSoundAndNext(){  
+  let sound = document.getElementById('clickSound');  
+  sound.currentTime = 0;  
+  sound.play();  
+  let slide = document.getElementById('slide');  
+  slide.classList.add('active');  
+  setTimeout(()=>{ window.location.href='/public'; }, 900);  
+}  
+</script>  </body>  
+</html>  
+""", warna=data["warna"], logo=data["logo"])  ===== LOGIN PAGE =====
 
-  <!-- Sosial Media -->
-  <div class="social">
-    <p>Ikuti Media Sosial Kami:</p>
-    <a class="instagram" href="https://www.instagram.com/9tengkuamirhamzah?igsh=cGVxcjFtdHJpeXR4" target="_blank">
-      <i class="fab fa-instagram"></i>Instagram
-    </a>
-    <a class="tiktok" href="https://www.tiktok.com/" target="_blank">
-      <i class="fab fa-tiktok"></i>TikTok
-    </a>
-  </div>
+login_page = """
 
-  <!-- Tombol Mulai -->
-  <button class="btn" onclick="playSoundAndNext()">Mulai Sekarang →</button>
-  <div class="slide" id="slide"></div>
+<!DOCTYPE html>  <html lang="id">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Login Admin</title>  
+<style>  
+body{margin:0;font-family:'Poppins',sans-serif;background:#74b9ff;display:flex;justify-content:center;align-items:center;height:100vh;}  
+.card{background:#ffffffee;padding:35px;border-radius:18px;box-shadow:0 4px 15px rgba(0,0,0,0.3);width:320px;text-align:center;}  
+input{width:100%;padding:12px;margin-top:15px;border-radius:10px;border:1px solid #ccc;font-size:16px;}  
+button{width:100%;margin-top:15px;padding:12px;font-size:17px;border:none;border-radius:10px;background:#6a5acd;color:white;font-weight:bold;cursor:pointer;}  
+</style>  
+</head>  
+<body>  
+<div class="card">  
+<h2>🔐 Login Admin</h2>  
+<input type="password" id="pass" placeholder="Masukkan Password">  
+<button onclick="login()">Masuk</button>  
+<p id="msg" style="color:red;margin-top:10px;"></p>  
+</div>  
+<script>  
+function login(){  
+    fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},  
+    body:JSON.stringify({password:document.getElementById('pass').value})})  
+    .then(r=>r.json()).then(d=>{if(d.success){window.location='/admin';}else{msg.innerText='Password salah!';}});  
+}  
+</script>  
+</body></html>  
+"""  ===== PUBLIC UI =====
 
-  <!-- Lagu Latar -->
-  <audio id="bgMusic" loop playsinline>
-    <source src="https://files.catbox.moe/da2y8i.mp4" type="audio/mp4">
-  </audio>
+public_ui = """
 
-  <!-- Suara Klik -->
-  <audio id="clickSound">
-    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e4d1b7df3.mp3?filename=soft-click-131912.mp3" type="audio/mpeg">
-  </audio>
+<!DOCTYPE html>  <html lang="id">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>IX T Amir Hamzah</title>  
+<style>  
+body{margin:0;font-family:'Poppins',sans-serif;background:{{warna}};transition:background 0.6s ease;}  
+header{background:rgba(255,255,255,0.8);text-align:center;padding:20px;font-size:26px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);}  
+#sidebar{position:fixed;left:-260px;top:0;width:260px;height:100%;background:#fff;box-shadow:2px 0 10px rgba(0,0,0,0.3);  
+transition:left 0.4s ease,opacity 0.3s ease;opacity:0;padding:20px;z-index:10;}  
+#sidebar.active{left:0;opacity:1;}  
+#sidebar button{display:block;width:100%;margin-bottom:10px;padding:10px;border:none;background:{{warna}};color:#fff;  
+border-radius:12px;font-size:16px;cursor:pointer;}  
+#openSidebar{position:fixed;left:15px;top:15px;font-size:26px;background:rgba(255,255,255,0.7);border:none;  
+padding:8px 12px;border-radius:10px;cursor:pointer;z-index:20;}  
+.bubble{display:inline-block;background:{{kotak_warna}};border-radius:20px;padding:15px;margin:10px;  
+width:260px;box-shadow:0 4px 8px rgba(0,0,0,0.2);text-align:left;word-wrap:break-word;}  
+.detail-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);  
+display:none;justify-content:center;align-items:center;z-index:30;}  
+.detail-content{background:#fff;padding:20px;border-radius:15px;max-width:90%;max-height:90%;overflow:auto;text-align:center;}  
+.detail-content img{max-width:100%;border-radius:10px;margin-bottom:10px;}  
+button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border-radius:10px;cursor:pointer;}  
+</style>  
+</head>  
+<body>  
+{% if musik %}<audio autoplay loop><source src="{{musik}}" type="audio/mpeg"></audio>{% endif %}  
+<button id="openSidebar">☰</button>  
+<div id="sidebar">  
+    <button onclick="showCategory('siswa')">👨‍🎓 Siswa</button>  
+    <button onclick="showCategory('kegiatan')">📸 Kegiatan</button>  
+    <button onclick="showCategory('jadwal')">📅 Jadwal</button>  
+    <button onclick="showCategory('piket')">🧹 Piket</button>  
+    <button onclick="showCategory('struktur')">🏫 Struktur</button>  
+    <button onclick="window.location.href='/login'">⚙️ Admin</button>  
+</div>  <header>IX T AMIR HAMZAH</header>  
+{% if logo %}<img src="{{logo}}" style="display:block;margin:20px auto;width:120px;height:120px;border-radius:50%;object-fit:cover;">{% endif %}  
+<div id="content" style="padding:20px;text-align:center;">  
+    <h2>🌟 Selamat Datang di Website IX T Amir Hamzah 🌟</h2>  
+</div>  <div class="detail-modal" id="modal">  
+    <div class="detail-content" id="modalContent"></div>  
+</div>  <script>  
+const sidebar=document.getElementById('sidebar'),content=document.getElementById('content'),  
+modal=document.getElementById('modal'),modalContent=document.getElementById('modalContent');  
+document.getElementById('openSidebar').onclick=()=>sidebar.classList.toggle('active');  
+  
+function showCategory(cat){  
+    sidebar.classList.remove('active');  
+    if(cat==='siswa'){  
+        fetch('/get_siswa').then(r=>r.json()).then(s=>{  
+            let h="<h2>👨‍🎓 Daftar Murid</h2>";  
+            s.forEach(a=>h+=`<div class='bubble'><b>${a.nama}</b><br>${a.info}</div>`);  
+            content.innerHTML=h||"<p>Belum ada data.</p>";  
+        });  
+    }else if(cat==='kegiatan'){  
+        fetch('/get_kegiatan').then(r=>r.json()).then(k=>{  
+            let h="<h2>📸 Kegiatan IX T Amir Hamzah</h2>";  
+            k.forEach((x,i)=>{  
+                h+=`<div class='bubble' onclick='showDetail(\"kegiatan\",${i})'>  
+                    ${x.foto?`<img src='${x.foto}' style='width:100%;border-radius:10px;'>`:""}  
+                    <h3>${x.tentang || ""}</h3></div>`;  
+            });  
+            content.innerHTML=h||"<p>Belum ada kegiatan.</p>";  
+        });  
+    }else if(cat==='jadwal'){  
+        fetch('/get_jadwal').then(r=>r.json()).then(j=>{  
+            let h="<h2>📅 Jadwal Pelajaran</h2>";  
+            j.forEach((item,i)=>{  
+                h+=`<div class='bubble' onclick='showDetail(\"jadwal\",${i})'>  
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}  
+                    <h3>${item.tentang || ""}</h3></div>`;  
+            });  
+            content.innerHTML=h||"<p>Belum ada jadwal.</p>";  
+        });  
+    }else if(cat==='piket'){  
+        fetch('/get_piket').then(r=>r.json()).then(p=>{  
+            let h="<h2>🧹 Jadwal Piket</h2>";  
+            p.forEach((item,i)=>{  
+                h+=`<div class='bubble' onclick='showDetail(\"piket\",${i})'>  
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}  
+                    <h3>${item.tentang || ""}</h3></div>`;  
+            });  
+            content.innerHTML=h||"<p>Belum ada piket.</p>";  
+        });  
+    }else if(cat==='struktur'){  
+        fetch('/get_struktur').then(r=>r.json()).then(s=>{  
+            let h="<h2>🏫 Struktur Kelas</h2>";  
+            s.forEach((item,i)=>{  
+                h+=`<div class='bubble' onclick='showDetail(\"struktur\",${i})'>  
+                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}  
+                    <h3>${item.tentang || ""}</h3></div>`;  
+            });  
+            content.innerHTML=h||"<p>Belum ada struktur kelas.</p>";  
+        });  
+    }  
+}  
+  
+function showDetail(category, index){  
+    // generic detail fetcher for kegiatan, jadwal, piket, struktur  
+    const routeMap = {  
+        kegiatan: '/get_kegiatan',  
+        jadwal: '/get_jadwal',  
+        piket: '/get_piket',  
+        struktur: '/get_struktur'  
+    };  
+    fetch(routeMap[category]).then(r=>r.json()).then(arr=>{  
+        const d = arr[index];  
+        if(!d) return;  
+        modal.style.display='flex';  
+        modalContent.innerHTML = `<h2>${d.tentang || ""}</h2>  
+            ${d.foto?`<img src='${d.foto}'>`:""}  
+            ${d.foto2?`<img src='${d.foto2}'>`:""}  
+            <p>${d.isi || ""}</p>  
+            <button class='close' onclick='modal.style.display=\"none\"'>Tutup</button>`;  
+    });  
+}  
+  
+window.onclick=e=>{if(e.target===modal)modal.style.display='none';};  
+</script>  </body></html>  
+"""  ===== ADMIN PANEL =====
 
-<script>
-const bgMusic = document.getElementById('bgMusic');
-const toggleBtn = document.getElementById('musicToggle');
-bgMusic.volume = 0.4;
+admin_panel = """
 
-function toggleMusic() {
-  if (bgMusic.paused) {
-    bgMusic.play();
-    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Matikan Lagu';
-  } else {
-    bgMusic.pause();
-    toggleBtn.innerHTML = '<i class="fa-solid fa-volume-up"></i> Izinkan Lagu';
-  }
-}
-
-function playSoundAndNext(){
-  let sound = document.getElementById('clickSound');
-  sound.currentTime = 0;
-  sound.play();
-  let slide = document.getElementById('slide');
-  slide.classList.add('active');
-  setTimeout(()=>{ window.location.href='/public'; }, 900);
-}
-</script>
-</body>
-</html>
-"""
-
-login_page = """\
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Admin</title>
-<style>
-body{margin:0;font-family:'Poppins',sans-serif;background:#74b9ff;display:flex;justify-content:center;align-items:center;height:100vh;}
-.card{background:#ffffffee;padding:35px;border-radius:18px;box-shadow:0 4px 15px rgba(0,0,0,0.3);width:320px;text-align:center;}
-input{width:100%;padding:12px;margin-top:15px;border-radius:10px;border:1px solid #ccc;font-size:16px;}
-button{width:100%;margin-top:15px;padding:12px;font-size:17px;border:none;border-radius:10px;background:#6a5acd;color:white;font-weight:bold;cursor:pointer;}
-</style>
-</head>
-<body>
-<div class="card">
-<h2>🔐 Login Admin</h2>
-<input type="password" id="pass" placeholder="Masukkan Password">
-<button onclick="login()">Masuk</button>
-<p id="msg" style="color:red;margin-top:10px;"></p>
-</div>
-<script>
-function login(){
-    fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password:document.getElementById('pass').value})})
-    .then(r=>r.json()).then(d=>{if(d.success){window.location='/admin';}else{msg.innerText='Password salah!';}});
-}
-</script>
-</body></html>
-"""
-
-public_ui = """\
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IX T Amir Hamzah</title>
-<style>
-body{margin:0;font-family:'Poppins',sans-serif;background:{{warna}};transition:background 0.6s ease;}
-header{background:rgba(255,255,255,0.8);text-align:center;padding:20px;font-size:26px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
-#sidebar{position:fixed;left:-260px;top:0;width:260px;height:100%;background:#fff;box-shadow:2px 0 10px rgba(0,0,0,0.3);
-transition:left 0.4s ease,opacity 0.3s ease;opacity:0;padding:20px;z-index:10;}
-#sidebar.active{left:0;opacity:1;}
-#sidebar button{display:block;width:100%;margin-bottom:10px;padding:10px;border:none;background:{{warna}};color:#fff;
-border-radius:12px;font-size:16px;cursor:pointer;}
-#openSidebar{position:fixed;left:15px;top:15px;font-size:26px;background:rgba(255,255,255,0.7);border:none;
-padding:8px 12px;border-radius:10px;cursor:pointer;z-index:20;}
-.bubble{display:inline-block;background:{{kotak_warna}};border-radius:20px;padding:15px;margin:10px;
-width:260px;box-shadow:0 4px 8px rgba(0,0,0,0.2);text-align:left;word-wrap:break-word;}
-.detail-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);
-display:none;justify-content:center;align-items:center;z-index:30;}
-.detail-content{background:#fff;padding:20px;border-radius:15px;max-width:90%;max-height:90%;overflow:auto;text-align:center;}
-.detail-content img{max-width:100%;border-radius:10px;margin-bottom:10px;}
-button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border-radius:10px;cursor:pointer;}
-</style>
-</head>
-<body>
-{% if musik %}<audio autoplay loop><source src="{{musik}}" type="audio/mpeg"></audio>{% endif %}
-<button id="openSidebar">☰</button>
-<div id="sidebar">
-    <button onclick="showCategory('siswa')">👨‍🎓 Siswa</button>
-    <button onclick="showCategory('kegiatan')">📸 Kegiatan</button>
-    <button onclick="showCategory('jadwal')">📅 Jadwal</button>
-    <button onclick="showCategory('piket')">🧹 Piket</button>
-    <button onclick="showCategory('struktur')">🏫 Struktur</button>
-    <button onclick="window.location.href='/login'">⚙️ Admin</button>
-</div>
-
-<header>IX T AMIR HAMZAH</header>
-{% if logo %}<img src="{{logo}}" style="display:block;margin:20px auto;width:120px;height:120px;border-radius:50%;object-fit:cover;">{% endif %}
-<div id="content" style="padding:20px;text-align:center;">
-    <h2>🌟 Selamat Datang di Website IX T Amir Hamzah 🌟</h2>
-</div>
-
-<div class="detail-modal" id="modal">
-    <div class="detail-content" id="modalContent"></div>
-</div>
-
-<script>
-const sidebar=document.getElementById('sidebar'),content=document.getElementById('content'),
-modal=document.getElementById('modal'),modalContent=document.getElementById('modalContent');
-document.getElementById('openSidebar').onclick=()=>sidebar.classList.toggle('active');
-
-function showCategory(cat){
-    sidebar.classList.remove('active');
-    if(cat==='siswa'){
-        fetch('/get_siswa').then(r=>r.json()).then(s=>{
-            let h="<h2>👨‍🎓 Daftar Murid</h2>";
-            s.forEach(a=>h+=`<div class='bubble'><b>${a.nama}</b><br>${a.info}</div>`);
-            content.innerHTML=h||"<p>Belum ada data.</p>";
-        });
-    }else if(cat==='kegiatan'){
-        fetch('/get_kegiatan').then(r=>r.json()).then(k=>{
-            let h="<h2>📸 Kegiatan IX T Amir Hamzah</h2>";
-            k.forEach((x,i)=>{
-                h+=`<div class='bubble' onclick='showDetail(\"kegiatan\",${i})'>
-                    ${x.foto?`<img src='${x.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${x.tentang || ""}</h3></div>`;
-            });
-            content.innerHTML=h||"<p>Belum ada kegiatan.</p>";
-        });
-    }else if(cat==='jadwal'){
-        fetch('/get_jadwal').then(r=>r.json()).then(j=>{
-            let h="<h2>📅 Jadwal Pelajaran</h2>";
-            j.forEach((item,i)=>{
-                h+=`<div class='bubble' onclick='showDetail(\"jadwal\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
-            });
-            content.innerHTML=h||"<p>Belum ada jadwal.</p>";
-        });
-    }else if(cat==='piket'){
-        fetch('/get_piket').then(r=>r.json()).then(p=>{
-            let h="<h2>🧹 Jadwal Piket</h2>";
-            p.forEach((item,i)=>{
-                h+=`<div class='bubble' onclick='showDetail(\"piket\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
-            });
-            content.innerHTML=h||"<p>Belum ada piket.</p>";
-        });
-    }else if(cat==='struktur'){
-        fetch('/get_struktur').then(r=>r.json()).then(s=>{
-            let h="<h2>🏫 Struktur Kelas</h2>";
-            s.forEach((item,i)=>{
-                h+=`<div class='bubble' onclick='showDetail(\"struktur\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
-            });
-            content.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
-        });
-    }
-}
-
-function showDetail(category, index){
-    // generic detail fetcher for kegiatan, jadwal, piket, struktur
-    const routeMap = {
-        kegiatan: '/get_kegiatan',
-        jadwal: '/get_jadwal',
-        piket: '/get_piket',
-        struktur: '/get_struktur'
-    };
-    fetch(routeMap[category]).then(r=>r.json()).then(arr=>{
-        const d = arr[index];
-        if(!d) return;
-        modal.style.display='flex';
-        modalContent.innerHTML = `<h2>${d.tentang || ""}</h2>
-            ${d.foto?`<img src='${d.foto}'>`:""}
-            ${d.foto2?`<img src='${d.foto2}'>`:""}
-            <p>${d.isi || ""}</p>
-            <button class='close' onclick='modal.style.display=\"none\"'>Tutup</button>`;
-    });
-}
-
-window.onclick=e=>{if(e.target===modal)modal.style.display='none';};
-</script>
-</body></html>
-"""
-
-admin_panel = """\
-<!DOCTYPE html>
-<html lang="id">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Admin Panel</title>
-<style>
-body{font-family:'Poppins',sans-serif;background:{{warna}};margin:0;}
-.container{max-width:700px;margin:40px auto;background:#ffffffee;padding:25px;border-radius:20px;}
-input,textarea{width:100%;padding:10px;margin:6px 0;border-radius:10px;border:1px solid #ccc;}
-button{padding:10px 15px;border:none;border-radius:10px;background:#0984e3;color:white;cursor:pointer;margin-top:5px;}
-.kotak{background:{{kotak_warna}};padding:10px;border-radius:10px;margin:5px 0;}
-</style></head><body>
-<div class="container">
-<h1>⚙️ Admin Panel</h1>
-
-<h3>🎨 Warna Tema</h3>
-<input type="color" id="warna" value="{{warna}}">
-<input type="color" id="kotak" value="{{kotak_warna}}">
-<button onclick="setWarna()">Simpan Warna</button>
-
-<h3>🎵 Musik</h3>
-<input type="text" id="musik" value="{{musik}}" placeholder="URL musik (mp3)">
-<button onclick="setMusik()">Simpan Musik</button>
-
-<h3>🖼️ Logo</h3>
-<input type="text" id="logo" value="{{logo}}" placeholder="URL logo">
-<button onclick="setLogo()">Simpan Logo</button>
-
-<hr>
-<h3>👨‍🎓 Tambah Siswa</h3>
-<input type="text" id="nama" placeholder="Nama">
-<textarea id="info" placeholder="Informasi"></textarea>
-<button onclick="tambahSiswa()">Tambah</button>
-<div id="listsiswa"></div>
-
-<hr>
-<h3>📸 Tambah Kegiatan</h3>
-<input type="text" id="foto" placeholder="Foto (opsional)">
-<input type="text" id="tentang" placeholder="Judul / Tentang">
-<input type="text" id="foto2" placeholder="Foto Kedua (opsional)">
-<textarea id="isi" placeholder="Isi kegiatan"></textarea>
-<button onclick="tambahKegiatan()">Tambah Kegiatan</button>
-<div id="listkegiatan"></div>
-
-<hr>
-<h3>📅 Tambah Jadwal Pelajaran</h3>
-<input type="text" id="jadwal_foto" placeholder="Foto Jadwal (opsional)">
-<input type="text" id="jadwal_foto2" placeholder="Foto Kedua (opsional)">
-<input type="text" id="jadwal_tentang" placeholder="Judul / Tentang">
-<textarea id="jadwal_isi" placeholder="Isi / Deskripsi"></textarea>
-<button onclick="tambahJadwal()">Tambah Jadwal</button>
-<div id="listjadwal"></div>
-
-<hr>
-<h3>🧹 Tambah Jadwal Piket</h3>
-<input type="text" id="piket_foto" placeholder="Foto Piket (opsional)">
-<input type="text" id="piket_foto2" placeholder="Foto Kedua (opsional)">
-<input type="text" id="piket_tentang" placeholder="Judul / Tentang">
-<textarea id="piket_isi" placeholder="Isi / Deskripsi"></textarea>
-<button onclick="tambahPiket()">Tambah Piket</button>
-<div id="listpiket"></div>
-
-<hr>
-<h3>🏫 Tambah Struktur Kelas</h3>
-<input type="text" id="struktur_foto" placeholder="Foto Struktur (opsional)">
-<input type="text" id="struktur_foto2" placeholder="Foto Kedua (opsional)">
-<input type="text" id="struktur_tentang" placeholder="Judul / Tentang">
-<textarea id="struktur_isi" placeholder="Isi / Deskripsi"></textarea>
-<button onclick="tambahStruktur()">Tambah Struktur</button>
-<div id="liststruktur"></div>
-
-</div>
-<script>
-function loadSiswa(){
- fetch('/get_siswa').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((s,i)=>h+=`<div class='kotak'><b>${s.nama}</b><br>${s.info}<br><button onclick='hapusS(${i})'>Hapus</button></div>`);
-  listsiswa.innerHTML=h||"<p>Belum ada siswa.</p>";
- });}
-function loadKegiatan(){
- fetch('/get_kegiatan').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((k,i)=>h+=`<div class='kotak'><b>${k.tentang || ''}</b><br><button onclick='hapusK(${i})'>Hapus</button></div>`);
-  listkegiatan.innerHTML=h||"<p>Belum ada kegiatan.</p>";
- });}
-
-function loadJadwal(){
- fetch('/get_jadwal').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusJadwal(${i})'>Hapus</button></div>`);
-  listjadwal.innerHTML=h||"<p>Belum ada jadwal.</p>";
- });}
+<!DOCTYPE html>  <html lang="id">  
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">  
+<title>Admin Panel</title>  
+<style>  
+body{font-family:'Poppins',sans-serif;background:{{warna}};margin:0;}  
+.container{max-width:700px;margin:40px auto;background:#ffffffee;padding:25px;border-radius:20px;}  
+input,textarea{width:100%;padding:10px;margin:6px 0;border-radius:10px;border:1px solid #ccc;}  
+button{padding:10px 15px;border:none;border-radius:10px;background:#0984e3;color:white;cursor:pointer;margin-top:5px;}  
+.kotak{background:{{kotak_warna}};padding:10px;border-radius:10px;margin:5px 0;}  
+</style></head><body>  
+<div class="container">  
+<h1>⚙️ Admin Panel</h1>  <h3>🎨 Warna Tema</h3>  
+<input type="color" id="warna" value="{{warna}}">  
+<input type="color" id="kotak" value="{{kotak_warna}}">  
+<button onclick="setWarna()">Simpan Warna</button>  <h3>🎵 Musik</h3>  
+<input type="text" id="musik" value="{{musik}}" placeholder="URL musik (mp3)">  
+<button onclick="setMusik()">Simpan Musik</button>  <h3>🖼️ Logo</h3>  
+<input type="text" id="logo" value="{{logo}}" placeholder="URL logo">  
+<button onclick="setLogo()">Simpan Logo</button>  <hr>  
+<h3>👨‍🎓 Tambah Siswa</h3>  
+<input type="text" id="nama" placeholder="Nama">  
+<textarea id="info" placeholder="Informasi"></textarea>  
+<button onclick="tambahSiswa()">Tambah</button>  
+<div id="listsiswa"></div>  <hr>  
+<h3>📸 Tambah Kegiatan</h3>  
+<input type="text" id="foto" placeholder="Foto (opsional)">  
+<input type="text" id="tentang" placeholder="Judul / Tentang">  
+<input type="text" id="foto2" placeholder="Foto Kedua (opsional)">  
+<textarea id="isi" placeholder="Isi kegiatan"></textarea>  
+<button onclick="tambahKegiatan()">Tambah Kegiatan</button>  
+<div id="listkegiatan"></div>  <hr>  
+<h3>📅 Tambah Jadwal Pelajaran</h3>  
+<input type="text" id="jadwal_foto" placeholder="Foto Jadwal (opsional)">  
+<input type="text" id="jadwal_foto2" placeholder="Foto Kedua (opsional)">  
+<input type="text" id="jadwal_tentang" placeholder="Judul / Tentang">  
+<textarea id="jadwal_isi" placeholder="Isi / Deskripsi"></textarea>  
+<button onclick="tambahJadwal()">Tambah Jadwal</button>  
+<div id="listjadwal"></div>  <hr>  
+<h3>🧹 Tambah Jadwal Piket</h3>  
+<input type="text" id="piket_foto" placeholder="Foto Piket (opsional)">  
+<input type="text" id="piket_foto2" placeholder="Foto Kedua (opsional)">  
+<input type="text" id="piket_tentang" placeholder="Judul / Tentang">  
+<textarea id="piket_isi" placeholder="Isi / Deskripsi"></textarea>  
+<button onclick="tambahPiket()">Tambah Piket</button>  
+<div id="listpiket"></div>  <hr>  
+<h3>🏫 Tambah Struktur Kelas</h3>  
+<input type="text" id="struktur_foto" placeholder="Foto Struktur (opsional)">  
+<input type="text" id="struktur_foto2" placeholder="Foto Kedua (opsional)">  
+<input type="text" id="struktur_tentang" placeholder="Judul / Tentang">  
+<textarea id="struktur_isi" placeholder="Isi / Deskripsi"></textarea>  
+<button onclick="tambahStruktur()">Tambah Struktur</button>  
+<div id="liststruktur"></div>  </div>  
+<script>  
+function loadSiswa(){  
+ fetch('/get_siswa').then(r=>r.json()).then(d=>{  
+  let h="";d.forEach((s,i)=>h+=`<div class='kotak'><b>${s.nama}</b><br>${s.info}<br><button onclick='hapusS(${i})'>Hapus</button></div>`);  
+  listsiswa.innerHTML=h||"<p>Belum ada siswa.</p>";  
+ });}  
+function loadKegiatan(){  
+ fetch('/get_kegiatan').then(r=>r.json()).then(d=>{  
+  let h="";d.forEach((k,i)=>h+=`<div class='kotak'><b>${k.tentang || ''}</b><br><button onclick='hapusK(${i})'>Hapus</button></div>`);  
+  listkegiatan.innerHTML=h||"<p>Belum ada kegiatan.</p>";  
+ });}  function loadJadwal(){
+fetch('/get_jadwal').then(r=>r.json()).then(d=>{
+let h="";d.forEach((it,i)=>h+=<div class='kotak'>${it.foto?<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>:""}<b>${it.tentang || ''}</b><br><button onclick='hapusJadwal(${i})'>Hapus</button></div>);
+listjadwal.innerHTML=h||"<p>Belum ada jadwal.</p>";
+});}
 function loadPiket(){
- fetch('/get_piket').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusPiket(${i})'>Hapus</button></div>`);
-  listpiket.innerHTML=h||"<p>Belum ada piket.</p>";
- });}
+fetch('/get_piket').then(r=>r.json()).then(d=>{
+let h="";d.forEach((it,i)=>h+=<div class='kotak'>${it.foto?<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>:""}<b>${it.tentang || ''}</b><br><button onclick='hapusPiket(${i})'>Hapus</button></div>);
+listpiket.innerHTML=h||"<p>Belum ada piket.</p>";
+});}
 function loadStruktur(){
- fetch('/get_struktur').then(r=>r.json()).then(d=>{
-  let h="";d.forEach((it,i)=>h+=`<div class='kotak'>${it.foto?`<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>`:""}<b>${it.tentang || ''}</b><br><button onclick='hapusStruktur(${i})'>Hapus</button></div>`);
-  liststruktur.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
- });}
+fetch('/get_struktur').then(r=>r.json()).then(d=>{
+let h="";d.forEach((it,i)=>h+=<div class='kotak'>${it.foto?<img src='${it.foto}' style='max-width:120px;border-radius:8px;'><br>:""}<b>${it.tentang || ''}</b><br><button onclick='hapusStruktur(${i})'>Hapus</button></div>);
+liststruktur.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
+});}
 
 function tambahSiswa(){
- fetch('/tambah_siswa',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({nama:nama.value,info:info.value})}).then(()=>{nama.value='';info.value='';loadSiswa();});
+fetch('/tambah_siswa',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({nama:nama.value,info:info.value})}).then(()=>{nama.value='';info.value='';loadSiswa();});
 }
 function hapusS(i){fetch('/hapus_siswa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadSiswa());}
 
 function tambahKegiatan(){
- fetch('/tambah_kegiatan',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({foto:foto.value,tentang:tentang.value,foto2:foto2.value,isi:isi.value})}).then(()=>{foto.value='';tentang.value='';foto2.value='';isi.value='';loadKegiatan();});
+fetch('/tambah_kegiatan',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({foto:foto.value,tentang:tentang.value,foto2:foto2.value,isi:isi.value})}).then(()=>{foto.value='';tentang.value='';foto2.value='';isi.value='';loadKegiatan();});
 }
 function hapusK(i){fetch('/hapus_kegiatan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadKegiatan());}
 
 function tambahJadwal(){
- fetch('/tambah_jadwal',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({foto:jadwal_foto.value,foto2:jadwal_foto2.value,tentang:jadwal_tentang.value,isi:jadwal_isi.value})})
- .then(()=>{jadwal_foto.value='';jadwal_foto2.value='';jadwal_tentang.value='';jadwal_isi.value='';loadJadwal();});
+fetch('/tambah_jadwal',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({foto:jadwal_foto.value,foto2:jadwal_foto2.value,tentang:jadwal_tentang.value,isi:jadwal_isi.value})})
+.then(()=>{jadwal_foto.value='';jadwal_foto2.value='';jadwal_tentang.value='';jadwal_isi.value='';loadJadwal();});
 }
 function hapusJadwal(i){fetch('/hapus_jadwal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadJadwal());}
 
 function tambahPiket(){
- fetch('/tambah_piket',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({foto:piket_foto.value,foto2:piket_foto2.value,tentang:piket_tentang.value,isi:piket_isi.value})})
- .then(()=>{piket_foto.value='';piket_foto2.value='';piket_tentang.value='';piket_isi.value='';loadPiket();});
+fetch('/tambah_piket',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({foto:piket_foto.value,foto2:piket_foto2.value,tentang:piket_tentang.value,isi:piket_isi.value})})
+.then(()=>{piket_foto.value='';piket_foto2.value='';piket_tentang.value='';piket_isi.value='';loadPiket();});
 }
 function hapusPiket(i){fetch('/hapus_piket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadPiket());}
 
 function tambahStruktur(){
- fetch('/tambah_struktur',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({foto:struktur_foto.value,foto2:struktur_foto2.value,tentang:struktur_tentang.value,isi:struktur_isi.value})})
- .then(()=>{struktur_foto.value='';struktur_foto2.value='';struktur_tentang.value='';struktur_isi.value='';loadStruktur();});
+fetch('/tambah_struktur',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({foto:struktur_foto.value,foto2:struktur_foto2.value,tentang:struktur_tentang.value,isi:struktur_isi.value})})
+.then(()=>{struktur_foto.value='';struktur_foto2.value='';struktur_tentang.value='';struktur_isi.value='';loadStruktur();});
 }
 function hapusStruktur(i){fetch('/hapus_struktur',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})}).then(()=>loadStruktur());}
 
 function setWarna(){fetch('/set_warna',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({warna:warna.value,kotak:kotak.value})});}
+body:JSON.stringify({warna:warna.value,kotak:kotak.value})});}
 function setMusik(){fetch('/set_musik',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({musik:musik.value})});}
 function setLogo(){fetch('/set_logo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({logo:logo.value})});}
 
@@ -686,124 +534,113 @@ loadSiswa();loadKegiatan();loadJadwal();loadPiket();loadStruktur();
 </script></body></html>
 """
 
-# ===== ROUTES =====
-
-@app.route('/')
-def welcome():
-    return render_template_string(welcome_template, warna=data["warna"], logo=data["logo"])
+===== ROUTES =====
 
 @app.route("/public")
 def public_page():
-    return render_template_string(public_ui, warna=data["warna"], kotak_warna=data["kotak_warna"],
-        musik=data["musik"], logo=data["logo"])
+return render_template_string(public_ui, warna=data["warna"], kotak_warna=data["kotak_warna"],
+musik=data["musik"], logo=data["logo"])
 
 @app.route("/login")
 def login_page_view():
-    return render_template_string(login_page)
+return render_template_string(login_page)
 
 @app.route("/login", methods=["POST"])
 def login_post():
-    if request.json.get("password") == "admin123":
-        session["admin"] = True
-        return jsonify(success=True)
-    return jsonify(success=False)
+if request.json.get("password") == "admintah123":
+session["admin"] = True
+return jsonify(success=True)
+return jsonify(success=False)
 
 @app.route("/admin")
 def admin_panel_page():
-    if not session.get("admin"): return redirect(url_for("login_page_view"))
-    return render_template_string(admin_panel, warna=data["warna"], kotak_warna=data["kotak_warna"],
-        musik=data["musik"], logo=data["logo"])
+if not session.get("admin"): return redirect(url_for("login_page_view"))
+return render_template_string(admin_panel, warna=data["warna"], kotak_warna=data["kotak_warna"],
+musik=data["musik"], logo=data["logo"])
 
-# ===== DATA API =====
+===== DATA API =====
+
 @app.route("/get_siswa")
 def get_siswa(): return jsonify(data["siswa"])
 
 @app.route("/tambah_siswa",methods=["POST"])
 def tambah_siswa():
-    data["siswa"].append(request.json); save_data(data); return jsonify(success=True)
+data["siswa"].append(request.json);save_data(data);return jsonify(success=True)
 
 @app.route("/hapus_siswa",methods=["POST"])
 def hapus_siswa():
-    i=request.json["index"]
-    if 0<=i<len(data["siswa"]): del data["siswa"][i]; save_data(data)
-    return jsonify(success=True)
+i=request.json["index"]
+if 0<=i<len(data["siswa"]): del data["siswa"][i];save_data(data)
+return jsonify(success=True)
 
 @app.route("/get_kegiatan")
 def get_kegiatan(): return jsonify(data["kegiatan"])
 
 @app.route("/tambah_kegiatan",methods=["POST"])
 def tambah_kegiatan():
-    data["kegiatan"].append(request.json); save_data(data); return jsonify(success=True)
+data["kegiatan"].append(request.json);save_data(data);return jsonify(success=True)
 
 @app.route("/hapus_kegiatan",methods=["POST"])
 def hapus_kegiatan():
-    i=request.json["index"]
-    if 0<=i<len(data["kegiatan"]): del data["kegiatan"][i]; save_data(data)
-    return jsonify(success=True)
+i=request.json["index"]
+if 0<=i<len(data["kegiatan"]): del data["kegiatan"][i];save_data(data)
+return jsonify(success=True)
 
-# ===== NEW CATEGORIES: JADWAL, PIKET, STRUKTUR =====
+===== NEW CATEGORIES: JADWAL, PIKET, STRUKTUR =====
+
 @app.route("/get_jadwal")
 def get_jadwal(): return jsonify(data.get("jadwal", []))
 
 @app.route("/tambah_jadwal",methods=["POST"])
 def tambah_jadwal():
-    data.setdefault("jadwal", []).append(request.json); save_data(data); return jsonify(success=True)
+data.setdefault("jadwal", []).append(request.json); save_data(data); return jsonify(success=True)
 
 @app.route("/hapus_jadwal",methods=["POST"])
 def hapus_jadwal():
-    i=request.json["index"]
-    if 0<=i<len(data.get("jadwal", [])): del data["jadwal"][i]; save_data(data)
-    return jsonify(success=True)
+i=request.json["index"]
+if 0<=i<len(data.get("jadwal", [])): del data["jadwal"][i]; save_data(data)
+return jsonify(success=True)
 
 @app.route("/get_piket")
 def get_piket(): return jsonify(data.get("piket", []))
 
 @app.route("/tambah_piket",methods=["POST"])
 def tambah_piket():
-    data.setdefault("piket", []).append(request.json); save_data(data); return jsonify(success=True)
+data.setdefault("piket", []).append(request.json); save_data(data); return jsonify(success=True)
 
 @app.route("/hapus_piket",methods=["POST"])
 def hapus_piket():
-    i=request.json["index"]
-    if 0<=i<len(data.get("piket", [])): del data["piket"][i]; save_data(data)
-    return jsonify(success=True)
+i=request.json["index"]
+if 0<=i<len(data.get("piket", [])): del data["piket"][i]; save_data(data)
+return jsonify(success=True)
 
 @app.route("/get_struktur")
 def get_struktur(): return jsonify(data.get("struktur", []))
 
 @app.route("/tambah_struktur",methods=["POST"])
 def tambah_struktur():
-    data.setdefault("struktur", []).append(request.json); save_data(data); return jsonify(success=True)
+data.setdefault("struktur", []).append(request.json); save_data(data); return jsonify(success=True)
 
 @app.route("/hapus_struktur",methods=["POST"])
 def hapus_struktur():
-    i=request.json["index"]
-    if 0<=i<len(data.get("struktur", [])): del data["struktur"][i]; save_data(data)
-    return jsonify(success=True)
+i=request.json["index"]
+if 0<=i<len(data.get("struktur", [])): del data["struktur"][i]; save_data(data)
+return jsonify(success=True)
 
-# ===== SETTINGS =====
-@app.route("/set_warna", methods=["POST"])
+===== SETTINGS =====
+
+@app.route("/set_warna",methods=["POST"])
 def set_warna():
-    j = request.json
-    data["warna"] = j.get("warna", data["warna"])
-    data["kotak_warna"] = j.get("kotak", data["kotak_warna"])
-    save_data(data)
-    return jsonify(success=True)
+j=request.json;data["warna"]=j["warna"];data["kotak_warna"]=j["kotak"];save_data(data);return jsonify(success=True)
 
-@app.route("/set_musik", methods=["POST"])
+@app.route("/set_musik",methods=["POST"])
 def set_musik():
-    j = request.json
-    data["musik"] = j.get("musik", "")
-    save_data(data)
-    return jsonify(success=True)
+data["musik"]=request.json["musik"];save_data(data);return jsonify(success=True)
 
-@app.route("/set_logo", methods=["POST"])
+@app.route("/set_logo",methods=["POST"])
 def set_logo():
-    j = request.json
-    data["logo"] = j.get("logo", "")
-    save_data(data)
-    return jsonify(success=True)
+data["logo"]=request.json["logo"];save_data(data);return jsonify(success=True)
 
-# ===== RUN =====
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if name=="main":
+port=int(os.environ.get("PORT",5000))
+app.run(host="0.0.0.0",port=port)
