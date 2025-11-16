@@ -321,6 +321,28 @@ public_ui = """
 <style>
 body{margin:0;font-family:'Poppins',sans-serif;background:{{warna}};transition:background 0.6s ease;}
 header{background:rgba(255,255,255,0.8);text-align:center;padding:20px;font-size:26px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+
+/* ===================== */
+/* 🔥 ANIMASI TEKS BARU  */
+/* ===================== */
+
+.text-animate {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: textReveal .6s ease forwards;
+}
+
+@keyframes textReveal {
+  from { opacity: 0; transform: translateY(15px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.delay-1 { animation-delay: .10s; }
+.delay-2 { animation-delay: .20s; }
+.delay-3 { animation-delay: .30s; }
+.delay-4 { animation-delay: .40s; }
+.delay-5 { animation-delay: .50s; }
+
 #sidebar{position:fixed;left:-260px;top:0;width:260px;height:100%;background:#fff;box-shadow:2px 0 10px rgba(0,0,0,0.3);
 transition:left 0.4s ease,opacity 0.3s ease;opacity:0;padding:20px;z-index:10;}
 #sidebar.active{left:0;opacity:1;}
@@ -328,8 +350,22 @@ transition:left 0.4s ease,opacity 0.3s ease;opacity:0;padding:20px;z-index:10;}
 border-radius:12px;font-size:16px;cursor:pointer;}
 #openSidebar{position:fixed;left:15px;top:15px;font-size:26px;background:rgba(255,255,255,0.7);border:none;
 padding:8px 12px;border-radius:10px;cursor:pointer;z-index:20;}
-.bubble{display:inline-block;background:{{kotak_warna}};border-radius:20px;padding:15px;margin:10px;
-width:260px;box-shadow:0 4px 8px rgba(0,0,0,0.2);text-align:left;word-wrap:break-word;}
+
+.bubble{
+    display:inline-block;
+    background:{{kotak_warna}};
+    border-radius:20px;
+    padding:15px;
+    margin:10px;
+    width:260px;
+    box-shadow:0 4px 8px rgba(0,0,0,0.2);
+    text-align:left;
+    word-wrap:break-word;
+    opacity:0;                     /* anim starts */
+    transform:translateY(20px);    /* anim starts */
+    animation: textReveal .6s ease forwards;
+}
+
 .detail-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);
 display:none;justify-content:center;align-items:center;z-index:30;}
 .detail-content{background:#fff;padding:20px;border-radius:15px;max-width:90%;max-height:90%;overflow:auto;text-align:center;}
@@ -338,8 +374,10 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
 </style>
 </head>
 <body>
+
 {% if musik %}<audio autoplay loop><source src="{{musik}}" type="audio/mpeg"></audio>{% endif %}
 <button id="openSidebar">☰</button>
+
 <div id="sidebar">
     <button onclick="showCategory('siswa')">👨‍🎓 Siswa</button>
     <button onclick="showCategory('kegiatan')">📸 Kegiatan</button>
@@ -349,10 +387,15 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
     <button onclick="window.location.href='/login'">⚙️ Admin</button>
 </div>
 
-<header>IX T AMIR HAMZAH</header>
-{% if logo %}<img src="{{logo}}" style="display:block;margin:20px auto;width:120px;height:120px;border-radius:50%;object-fit:cover;">{% endif %}
+<header class="text-animate delay-1">IX T AMIR HAMZAH</header>
+
+{% if logo %}
+<img src="{{logo}}" class="text-animate delay-2" 
+     style="display:block;margin:20px auto;width:120px;height:120px;border-radius:50%;object-fit:cover;">
+{% endif %}
+
 <div id="content" style="padding:20px;text-align:center;">
-    <h2>🌟 Selamat Datang di Website IX T Amir Hamzah 🌟</h2>
+    <h2 class="text-animate delay-3">🌟 Selamat Datang di Website IX T Amir Hamzah 🌟</h2>
 </div>
 
 <div class="detail-modal" id="modal">
@@ -360,78 +403,112 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
 </div>
 
 <script>
-const sidebar=document.getElementById('sidebar'),content=document.getElementById('content'),
-modal=document.getElementById('modal'),modalContent=document.getElementById('modalContent');
+const sidebar=document.getElementById('sidebar'),
+      content=document.getElementById('content'),
+      modal=document.getElementById('modal'),
+      modalContent=document.getElementById('modalContent');
+
 document.getElementById('openSidebar').onclick=()=>sidebar.classList.toggle('active');
+
+/* ======================================= */
+/* 🔥 Tambahkan animasi delay otomatis     */
+/* ======================================= */
+
+function applyTextAnimation() {
+    document.querySelectorAll('.bubble').forEach((el, i) => {
+        el.style.animationDelay = (i * 0.07) + "s";
+    });
+}
 
 function showCategory(cat){
     sidebar.classList.remove('active');
+
     if(cat==='siswa'){
         fetch('/get_siswa').then(r=>r.json()).then(s=>{
-            let h="<h2>👨‍🎓 Daftar Murid</h2>";
-            s.forEach(a=>h+=`<div class='bubble'><b>${a.nama}</b><br>${a.info}</div>`);
+            let h="<h2 class='text-animate delay-1'>👨‍🎓 Daftar Murid</h2>";
+            s.forEach((a,i)=>
+                h+=`<div class='bubble'> <b>${a.nama}</b><br>${a.info}</div>`
+            );
             content.innerHTML=h||"<p>Belum ada data.</p>";
+            applyTextAnimation();
         });
-    }else if(cat==='kegiatan'){
+    }
+
+    else if(cat==='kegiatan'){
         fetch('/get_kegiatan').then(r=>r.json()).then(k=>{
-            let h="<h2>📸 Kegiatan IX T Amir Hamzah</h2>";
+            let h="<h2 class='text-animate delay-1'>📸 Kegiatan IX T Amir Hamzah</h2>";
             k.forEach((x,i)=>{
                 h+=`<div class='bubble' onclick='showDetail(\"kegiatan\",${i})'>
-                    ${x.foto?`<img src='${x.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${x.tentang || ""}</h3></div>`;
+                        ${x.foto?`<img src='${x.foto}' style='width:100%;border-radius:10px;'>`:""}
+                        <h3>${x.tentang || ""}</h3>
+                    </div>`;
             });
             content.innerHTML=h||"<p>Belum ada kegiatan.</p>";
+            applyTextAnimation();
         });
-    }else if(cat==='jadwal'){
+    }
+
+    else if(cat==='jadwal'){
         fetch('/get_jadwal').then(r=>r.json()).then(j=>{
-            let h="<h2>📅 Jadwal Pelajaran</h2>";
+            let h="<h2 class='text-animate delay-1'>📅 Jadwal Pelajaran</h2>";
             j.forEach((item,i)=>{
                 h+=`<div class='bubble' onclick='showDetail(\"jadwal\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
+                        ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                        <h3>${item.tentang || ""}</h3>
+                    </div>`;
             });
             content.innerHTML=h||"<p>Belum ada jadwal.</p>";
+            applyTextAnimation();
         });
-    }else if(cat==='piket'){
+    }
+
+    else if(cat==='piket'){
         fetch('/get_piket').then(r=>r.json()).then(p=>{
-            let h="<h2>🧹 Jadwal Piket</h2>";
+            let h="<h2 class='text-animate delay-1'>🧹 Jadwal Piket</h2>";
             p.forEach((item,i)=>{
                 h+=`<div class='bubble' onclick='showDetail(\"piket\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
+                        ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                        <h3>${item.tentang || ""}</h3>
+                    </div>`;
             });
             content.innerHTML=h||"<p>Belum ada piket.</p>";
+            applyTextAnimation();
         });
-    }else if(cat==='struktur'){
-        fetch('/get_struktur').then(r=>r.json()).then(s=>{
-            let h="<h2>🏫 Struktur Kelas</h2>";
-            s.forEach((item,i)=>{
+    }
+
+    else if(cat==='struktur'){
+        fetch('/get_struktur').then(r=>r.json()).then(st=>{
+            let h="<h2 class='text-animate delay-1'>🏫 Struktur Kelas</h2>";
+            st.forEach((item,i)=>{
                 h+=`<div class='bubble' onclick='showDetail(\"struktur\",${i})'>
-                    ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
-                    <h3>${item.tentang || ""}</h3></div>`;
+                        ${item.foto?`<img src='${item.foto}' style='width:100%;border-radius:10px;'>`:""}
+                        <h3>${item.tentang || ""}</h3>
+                    </div>`;
             });
             content.innerHTML=h||"<p>Belum ada struktur kelas.</p>";
+            applyTextAnimation();
         });
     }
 }
 
 function showDetail(category, index){
-    // generic detail fetcher for kegiatan, jadwal, piket, struktur
     const routeMap = {
         kegiatan: '/get_kegiatan',
         jadwal: '/get_jadwal',
         piket: '/get_piket',
         struktur: '/get_struktur'
     };
+
     fetch(routeMap[category]).then(r=>r.json()).then(arr=>{
         const d = arr[index];
         if(!d) return;
         modal.style.display='flex';
-        modalContent.innerHTML = `<h2>${d.tentang || ""}</h2>
+        modalContent.innerHTML = `
+            <h2>${d.tentang || ""}</h2>
             ${d.foto?`<img src='${d.foto}'>`:""}
             ${d.foto2?`<img src='${d.foto2}'>`:""}
             <p>${d.isi || ""}</p>
-            <button class='close' onclick='modal.style.display=\"none\"'>Tutup</button>`;
+            <button class='close' onclick='modal.style.display="none"'>Tutup</button>`;
     });
 }
 
