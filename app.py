@@ -379,6 +379,8 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
 <button id="openSidebar">☰</button>
 
 <div id="sidebar">
+    <button onclick="showCategory('miaw')">Click Kategori Dibawah Ini Untuk Melihat Informasi Lainnya
+    .</button>
     <button onclick="showCategory('siswa')">👨‍🎓 Siswa</button>
     <button onclick="showCategory('kegiatan')">📸 Kegiatan</button>
     <button onclick="showCategory('jadwal')">📅 Jadwal</button>
@@ -395,7 +397,7 @@ button.close{background:#ff4d4d;color:white;border:none;padding:10px 15px;border
 {% endif %}
 
 <div id="content" style="padding:20px;text-align:center;">
-    <h2 class="text-animate delay-3">🌟 Selamat Datang di Website IX T Amir Hamzah 🌟</h2>
+    <h2 class="text-animate delay-3">Website kelas ini berfungsi sebagai pusat informasi terpadu yang memudahkan seluruh anggota kelas dalam mengakses data penting. Melalui fitur seperti daftar siswa, dokumentasi kegiatan, jadwal pelajaran, jadwal piket, serta struktur organisasi kelas, seluruh informasi dapat disajikan secara rapi, teratur, dan mudah dijangkau kapan pun diperlukan. Selain itu, adanya halaman admin memungkinkan pengelolaan data dilakukan dengan lebih efisien dan terstruktur. Dengan demikian, website ini membantu menciptakan sistem informasi kelas yang lebih modern, transparan, dan tertata.</h2>
 </div>
 
 <div class="detail-modal" id="modal">
